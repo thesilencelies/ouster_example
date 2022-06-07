@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1.0)
+cmake_minimum_required(VERSION 3.18.0)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 include(DefaultBuildType)
@@ -11,6 +11,11 @@ find_package(Eigen3 REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common)
 find_package(tf2_eigen REQUIRED)
 
+# ==== Options ====
+set(CMAKE_CXX_STANDARD 17)
+add_compile_options(-Wall -Wextra -Werror -Wno-error=deprecated-declarations)
+option(CMAKE_POSITION_INDEPENDENT_CODE "Build position independent code." ON)
+
 find_package(
   catkin REQUIRED
   COMPONENTS message_generation
@@ -21,11 +26,6 @@ find_package(
              roscpp
              tf2
              tf2_ros)
-
-# ==== Options ====
-set(CMAKE_CXX_STANDARD 14)
-add_compile_options(-Wall -Wextra -Werror -Wno-error=deprecated-declarations)
-option(CMAKE_POSITION_INDEPENDENT_CODE "Build position independent code." ON)
 
 # ==== Catkin ====
 add_message_files(FILES PacketMsg.msg)
@@ -49,27 +49,26 @@ catkin_package(
   DEPENDS
     EIGEN3)
 
+# use only MPL-licensed parts of eigen
+add_definitions(-DEIGEN_MPL2_ONLY)
+
+# catkin adds all include dirs to a single variable, don't try to use targets
+include_directories(${_ouster_ros_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS})
 # ==== Libraries ====
 # Build static libraries and bundle them into ouster_ros using the `--whole-archive` flag. This is
 # necessary because catkin doesn't interoperate easily with target-based cmake builds. Object
 # libraries are the recommended way to do this, but require >=3.13 to propagate usage requirements.
-set(_SAVE_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
-set(BUILD_SHARED_LIBS OFF)
+# set(_SAVE_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+# set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(../ouster_client ouster_client EXCLUDE_FROM_ALL)
-target_compile_options(ouster_client PRIVATE -Wno-deprecated-declarations)
+# target_compile_options(ouster_client PRIVATE -Wno-deprecated-declarations)
 message(STATUS "Ouster SDK client: Using EIGEN_MAX_ALIGN_BYTES = 32")
 target_compile_definitions(ouster_client PUBLIC EIGEN_MAX_ALIGN_BYTES=32)
-set(BUILD_SHARED_LIBS ${_SAVE_BUILD_SHARED_LIBS})
+# set(BUILD_SHARED_LIBS ${_SAVE_BUILD_SHARED_LIBS})
 
-# catkin adds all include dirs to a single variable, don't try to use targets
-include_directories(${_ouster_ros_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS})
 
-# use only MPL-licensed parts of eigen
-add_definitions(-DEIGEN_MPL2_ONLY)
-
-add_library(ouster_ros src/ros.cpp)
-target_link_libraries(ouster_ros PUBLIC ${catkin_LIBRARIES} ouster_build pcl_common PRIVATE
-  -Wl,--whole-archive ouster_client -Wl,--no-whole-archive)
+add_library(ouster_ros STATIC src/ros.cpp)
+target_link_libraries(ouster_ros PUBLIC ${catkin_LIBRARIES} ouster_build pcl_common ouster_client)
 target_compile_definitions(ouster_ros PUBLIC EIGEN_MAX_ALIGN_BYTES=32)
 add_dependencies(ouster_ros ${PROJECT_NAME}_gencpp)
 

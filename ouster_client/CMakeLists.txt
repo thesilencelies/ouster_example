@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1.0)
+cmake_minimum_required(VERSION 3.18.0)
 
 # ==== Project Name ====
 project(ouster_client VERSION 0.4.0)
@@ -7,6 +7,12 @@ set(ouster_client_VERSION_SUFFIX "")
 # ==== Requirements ====
 find_package(Eigen3 REQUIRED)
 find_package(jsoncpp REQUIRED)
+# ==== Options =====
+set(CMAKE_CXX_STANDARD 17)
+
+option(CMAKE_POSITION_INDEPENDENT_CODE "Build position independent code." ON)
+
+
 
 # ==== Build Metadata Target ====
 add_custom_target(generate_build_header)
@@ -25,7 +31,7 @@ target_include_directories(ouster_build INTERFACE
 add_dependencies(ouster_build generate_build_header)
 
 # ==== Libraries ====
-add_library(ouster_client src/client.cpp src/types.cpp src/netcompat.cpp src/lidar_scan.cpp
+add_library(ouster_client STATIC src/client.cpp src/types.cpp src/netcompat.cpp src/lidar_scan.cpp
   src/image_processing.cpp src/buffered_udp_source.cpp src/parsing.cpp)
 target_link_libraries(ouster_client
   PUBLIC Eigen3::Eigen $<BUILD_INTERFACE:ouster_build>
